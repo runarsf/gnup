@@ -138,22 +138,30 @@ fi
 # }}}
 
 select_commands_file () { # {{{
-  COMMANDS_FILE="${1}"
+  commands_file="${1}"
 
   if test -z "${COMMANDS_FILE}"; then
     if test -f 'commands'; then
       commands_file="./commands"
+      echo "1"
     elif (test -d '.git' || git rev-parse --is-inside-work-tree > /dev/null 2>&1) \
      && test -f "$(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2))"; then
       commands_file="$(printf $(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2)))"
+      echo "2"
     elif test -f "${HOME}/.config/commands"; then
       commands_file="${HOME}/.config/commands"
+      echo "3"
     elif test -f "${HOME}/.commands"; then
       commands_file="${HOME}/.commands"
+      echo "4"
     else
       printf "No commands file found.\n"
       exit 1
     fi
+  fi
+  if ! test -f "$(realpath ${commands_file})"; then
+    printf "Provided commands file not found.\n"
+    exit 1
   fi
 
   printf "$(realpath ${commands_file})"
