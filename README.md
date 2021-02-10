@@ -3,7 +3,8 @@
 ## TL;DR
 One command per line.\
 The *magic variables* `__file` and `__path` are supported.\
-Template tokens are formatted as `<token_name>` and can be reused.
+Template tokens are formatted as `<token_name>` and can be reused.\
+Template tokens can also be formatted as arrays: `<:item1,item2:>`.
 
 ![Example Usage](./example.gif)
 

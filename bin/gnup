@@ -263,19 +263,29 @@ substitute_arrays () { # {{{
     [[ ${_command} == *"<:"*","*":>"* ]] || break
 
     # Get the content of the first occurence of <keyword>
-    local _keyword="$(echo ${_command} | awk -F[\<\:\:\>] '{print $2}')"
+    local _keystring="$(echo ${_command} | awk -F[\<\>] '{print $2}')"
+    # Strip first and last character
+    local _keys="${_keystring:1: -1}"
+    # Turn keys into an array
+    IFS=',' read -r -a _keys <<< "${_keys}"
 
-    ## Get substitution for <keyword>
-    #if test -n "${ROFI}"; then
-    #  subst=$(echo "" | rofi -lines 0 -dmenu -p "${keyword}")
-    #else
-    #  read -p "${keyword}> " subst
-    #fi
-    ## Default to keyword if user doesn't provide any
-    #test -z "${subst}" && subst="${keyword}"
+    # Split _keys into a string with \n as the delimeter
+    local _keysplit=$( IFS=$'\n'; echo "${_keys[*]}" )
+    local _lines=$(( "$(printf "${_keysplit}" | wc -l)" + 1))
+
+    if test -n "${ROFI}"; then
+      _subst=$(rofi -lines ${_lines} -i -dmenu "${@}" <<< ${_keysplit})
+    else
+      _subst=$(\
+        printf "${_keysplit}" \
+      | fzf --query="${FZF_QUERY}" --exit-0
+      )
+    fi
+
+    test -z "${_subst}" && _subst="${_keys[0]}"
 
     # Replace <:keyword,list:> with ${subst}
-    _command="$(sed -E "s|(<${_keyword}>)|${_subst}|g" <<< ${_command})"
+    _command="$(sed -E "s|(<${_keystring}>)|${_subst}|g" <<< ${_command})"
   done
 
   eval "${1}='${_command}'"
@@ -294,13 +304,14 @@ utilize () { # {{{
   fi
 } # }}}
 
+# For future reference: the output of `select_commands_file` is assigned to `commands_file`.
 select_commands_file "commands_file" "${COMMANDS_FILE}"
 export __file="${commands_file}"
 export __path="$(dirname "${__file}")"
 
 select_command "command" "${commands_file}"
 
+substitute_arrays "command" "${command}"
 substitute_keywords "command" "${command}"
-#substitute_arrays "command" "${command}"
 
 utilize "${command}"
