@@ -8,6 +8,7 @@ Template tokens are formatted as `<token_name>` and can be reused.
 ![Example Usage](./example.gif)
 
 ## Install
+
 ```bash
 git clone https://github.com/runarsf/gnup
 cd gnup
@@ -20,6 +21,7 @@ fzf
 ```
 
 ## Uninstall
+
 ```bash
 sudo make uninstall
 ```

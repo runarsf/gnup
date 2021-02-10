@@ -1,64 +1,65 @@
 #!/usr/bin/env bash
 # https://trello.com/b/QwNLllss/gnup
-set -o errexit
+set -euo pipefail
+#set -o errexit
 #set -o pipefail
 #set -o noclobber
 #set -o nounset
 #set -o xtrace
 
 colours () { # {{{
-  export RESET=$'\e[0;39m'
+  RESET=$'\e[0;39m'
 
-  export E_BOLD=$'\e[1m'
-  export E_DIM=$'\e[2m'
-  export E_UNDERLINE=$'\e[4m'
-  export E_BLINK=$'\e[5m'
-  export E_INVERT=$'\e[7m'
-  export E_HIDDEN=$'\e[8m'
+  E_BOLD=$'\e[1m'
+  E_DIM=$'\e[2m'
+  E_UNDERLINE=$'\e[4m'
+  E_BLINK=$'\e[5m'
+  E_INVERT=$'\e[7m'
+  E_HIDDEN=$'\e[8m'
 
-  export R_NORMAL=$'\e[0m'
-  export R_BOLD=$'\e[21m'
-  export R_DIM=$'\e[22m'
-  export R_UNDERLINE=$'\e[24m'
-  export R_BLINK=$'\e[25m'
-  export R_INVERT=$'\e[27m'
-  export R_HIDDEN=$'\e[28m'
+  R_NORMAL=$'\e[0m'
+  R_BOLD=$'\e[21m'
+  R_DIM=$'\e[22m'
+  R_UNDERLINE=$'\e[24m'
+  R_BLINK=$'\e[25m'
+  R_INVERT=$'\e[27m'
+  R_HIDDEN=$'\e[28m'
 
-  export C_DEFAULT=$'\e[19m'
-  export C_BLACK=$'\e[30m'
-  export C_RED=$'\e[31m'
-  export C_GREEN=$'\e[32m'
-  export C_YELLOW=$'\e[33m'
-  export C_BLUE=$'\e[34m'
-  export C_MAGENTA=$'\e[35m'
-  export C_CYAN=$'\e[36m'
-  export C_LGRAY=$'\e[37m'
-  export C_DGRAY=$'\e[90m'
-  export C_LRED=$'\e[91m'
-  export C_LGREEN=$'\e[92m'
-  export C_LYELLOW=$'\e[93m'
-  export C_LBLUE=$'\e[94m'
-  export C_LMAGENTA=$'\e[95m'
-  export C_LCYAN=$'\e[96m'
-  export C_WHITE=$'\e[97m'
+  C_DEFAULT=$'\e[19m'
+  C_BLACK=$'\e[30m'
+  C_RED=$'\e[31m'
+  C_GREEN=$'\e[32m'
+  C_YELLOW=$'\e[33m'
+  C_BLUE=$'\e[34m'
+  C_MAGENTA=$'\e[35m'
+  C_CYAN=$'\e[36m'
+  C_LGRAY=$'\e[37m'
+  C_DGRAY=$'\e[90m'
+  C_LRED=$'\e[91m'
+  C_LGREEN=$'\e[92m'
+  C_LYELLOW=$'\e[93m'
+  C_LBLUE=$'\e[94m'
+  C_LMAGENTA=$'\e[95m'
+  C_LCYAN=$'\e[96m'
+  C_WHITE=$'\e[97m'
 
-  export B_DEFAULT=$'\e[49m'
-  export B_BLACK=$'\e[40m'
-  export B_RED=$'\e[41m'
-  export B_GREEN=$'\e[42m'
-  export B_YELLOW=$'\e[43m'
-  export B_BLUE=$'\e[44m'
-  export B_MAGENTA=$'\e[45m'
-  export B_CYAN=$'\e[46m'
-  export B_LGRAY=$'\e[47m'
-  export B_DGRAY=$'\e[100m'
-  export B_LRED=$'\e[101m'
-  export B_LGREEN=$'\e[102m'
-  export B_LYELLOW=$'\e[103m'
-  export B_LBLUE=$'\e[104m'
-  export B_LMAGENTA=$'\e[105m'
-  export B_LCYAN=$'\e[106m'
-  export B_WHITE=$'\e[106m'
+  B_DEFAULT=$'\e[49m'
+  B_BLACK=$'\e[40m'
+  B_RED=$'\e[41m'
+  B_GREEN=$'\e[42m'
+  B_YELLOW=$'\e[43m'
+  B_BLUE=$'\e[44m'
+  B_MAGENTA=$'\e[45m'
+  B_CYAN=$'\e[46m'
+  B_LGRAY=$'\e[47m'
+  B_DGRAY=$'\e[100m'
+  B_LRED=$'\e[101m'
+  B_LGREEN=$'\e[102m'
+  B_LYELLOW=$'\e[103m'
+  B_LBLUE=$'\e[104m'
+  B_LMAGENTA=$'\e[105m'
+  B_LCYAN=$'\e[106m'
+  B_WHITE=$'\e[106m'
 }
 colours
 # }}}
@@ -72,22 +73,49 @@ usage () { # {{{
 	  -q, --query     <${C_RED}query${RESET}>  Pre-fill query for selection menu.
 	  -d, --defaults           Display default commands in selection.
 	  -t, --text               Don't run command after selection, but print the product.
-	  -s, --silent             Silence some messages.
 	  -r, --rofi               Show rofi instead of fzf.
 	
 	${C_GREEN}Examples:${RESET}
 	  ${0} ${C_RED}-r${RESET}
-	  ${0} ${C_RED}--silent --defaults ${C_BLUE}~/.config/commands${RESET}
 	${RESET}
 	EOMAN
 } # }}}
 
 # Argument parsing {{{
-# TODO: Add --create-default (create default commands file)
-if test -p /dev/stdin; then
-  STDIN_COMMANDS="$(cat)"
-fi
+# TODO Add --create-default (create default commands file), or maybe move it to the Makefile. Maybe it should create file based on context.
+# TODO Check for dependencies.
+# TODO Add support for post-delection editing of command with tmp vim files. Or maybe zsh?
+# TODO Comments on previous line to appear in preview pane.
+# TODO Empty substitutions should be reusable (<> should not act as a token, rather substitute *just* that one)
+# TODO Required substitutions (e.g. <!keyword>)
+# FIXME Stdin pipe redirection {{{
+#if test -p /dev/stdin; then
+#  STDIN_COMMANDS="$(cat)"
+#fi
+
+# Check to see if a pipe exists on stdin.
+#if [ -p /dev/stdin ]; then
+#  echo "Data was piped to this script!"
+#  # If we want to read the input line by line
+#  while IFS= read line; do
+#    echo "Line: ${line}"
+#  done
+#  # Or if we want to simply grab all the data, we can simply use cat instead
+#  # cat
+#else
+#  echo "No input was found on stdin, skipping!"
+#  # Checking to ensure a filename was specified and that it exists
+#  if [ -f "$1" ]; then
+#    echo "Filename specified: ${1}"
+#    echo "Doing things now.."
+#  else
+#    echo "No input given!"
+#  fi
+#fi
+# }}}
+
 positional=()
+DEFAULT_COMMANDS="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -98,15 +126,14 @@ while test "${#}" -gt "0"; do
       FZF_QUERY="${2}"
       shift;shift;;
     -d|--defaults)
+      # TODO Add -e|--edit to edit instead of -d
       DEFAULT_COMMANDS=': Edit ${__type} commands file. ; ${EDITOR:-vim} ${__file}\n'
       shift;;
     -t|--text)
       OUTPUT_AS_TEXT="true"
       shift;;
-    -s|--silent)
-      SILENT="true"
-      shift;;
     -r|--rofi)
+      # TODO -q|--query arg for rofi, -p should work, maybe not in dmenu mode
       ROFI="true"
       shift;;
     --*)
@@ -130,111 +157,150 @@ done
 
 set -- "${positional[@]}"
 
-if test "${#}" -gt "0"; then
-  test -n "${SILENT}" || printf "Commands file(s): ${*}\n"
-  # No support for multiple files (yet)
-  COMMANDS_FILE="${1}"
-fi
+#if test "${#}" -gt "0"; then
+#  printf "Commands file: ${*}\n"
+#  COMMANDS_FILE="${1}"
+#fi
+COMMANDS_FILE="${1:-}"
 # }}}
 
 select_commands_file () { # {{{
-  commands_file="${1}"
+  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
+  local _commands_file="${2}"
+
+  # TODO Allow git-root commands file.
+  # ??? Maybe this function shouldn't check if the file exists so the function could be reused for checking where the commands file *should* be, like for -c|--create.
 
   if test -z "${COMMANDS_FILE}"; then
     if test -f 'commands'; then
-      commands_file="./commands"
-      echo "1"
+      _commands_file="./commands"
     elif (test -d '.git' || git rev-parse --is-inside-work-tree > /dev/null 2>&1) \
      && test -f "$(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2))"; then
-      commands_file="$(printf $(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2)))"
-      echo "2"
+      _commands_file="$(printf $(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2)))"
     elif test -f "${HOME}/.config/commands"; then
-      commands_file="${HOME}/.config/commands"
-      echo "3"
+      _commands_file="${HOME}/.config/commands"
     elif test -f "${HOME}/.commands"; then
-      commands_file="${HOME}/.commands"
-      echo "4"
+      _commands_file="${HOME}/.commands"
     else
       printf "No commands file found.\n"
-      exit 1
+      return 1
     fi
   fi
-  if ! test -f "$(realpath ${commands_file})"; then
+  if ! test -f "$(realpath ${_commands_file})"; then
     printf "Provided commands file not found.\n"
-    exit 1
+    return 1
   fi
 
-  printf "$(realpath ${commands_file})"
+  eval "${1}=$(realpath ${_commands_file})"
 } # }}}
 
 select_command () { # {{{
-  commands_file="${1}"
+  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
+  local _commands_file="${2}"
 
   #IFS=$'\r\n'
   #GLOBIGNORE='*'
   #commands=("$(<${commands_file})")
-  commands="${DEFAULT_COMMANDS}$(<${commands_file})"
-  commands="$(printf "${commands}" | awk '{$1=$1};1')"
-  lines=$(( "$(printf "${commands}" | wc -l)" + 1))
+  local _commands="${DEFAULT_COMMANDS}$(<${_commands_file})"
+  _commands="$(printf "${_commands}" | awk '{$1=$1};1')"
+  local _lines=$(( "$(printf "${_commands}" | wc -l)" + 1))
 
+  local _command
   if test -n "${ROFI}"; then
-    cmd=$(rofi -lines ${lines} -i -dmenu "${@}" <<< ${commands})
+    _command=$(rofi -lines ${_lines} -i -dmenu "${@}" <<< ${_commands})
   else
-    cmd=$(\
-      printf "${commands}" \
-    | fzf --query="${FZF_QUERY}" --select-1 --exit-0
+    _command=$(\
+      printf "${_commands}" \
+    | fzf --query="${FZF_QUERY}" --exit-0
     )
   fi
-  if test -n "${cmd}"; then
-    printf "${cmd}"
+  if test -n "${_command}"; then
+    eval "${1}='${_command}'"
   else
-    exit 1
+    return 1
   fi
 } # }}}
 
-substitute_command () { # {{{
-  cmd="${1}"
+substitute_keywords () { # {{{
+  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
+  local _command="${2}"
+
   while true; do
     # Check if anything left to replace
-    [[ ${cmd} == *"<"*">"* ]] || break
-    # Get the content of the first occurence of <this>
-    index="$(echo ${cmd} | awk -F[\<\>] '{print $2}')"
-    # Get substitution for <this>
+    [[ ${_command} == *"<"*">"* ]] || break
+
+    # Get the content of the first occurence of <keyword>
+    local _keyword="$(echo ${_command} | awk -F[\<\>] '{print $2}')"
+
+    # Get substitution for <keyword>
+    local _subst
     if test -n "${ROFI}"; then
-      subst=$(echo "" | rofi -lines 0 -dmenu -p "${index}")
+      _subst=$(echo "" | rofi -lines 0 -dmenu -p "${_keyword}")
     else
-      read -p "${index}> " subst
+      read -p "${_keyword}> " _subst
     fi
-    test -z "${subst}" && subst="${index}"
-    # Replace all occurences of <this>
-    # Don't replace all when only <>
+    # Default to keyword if user doesn't provide any substitution/replacement
+    test -z "${_subst}" && _subst="${_keyword}"
+
+    # Replace <keyword> with ${subst}
+    # TODO Don't replace all when only <>
     #if [[ $b =~ "^.*<.*\S.*>.*$" ]]; then
-      cmd="$(sed -E "s|(<${index}>)|${subst}|g" <<< ${cmd})"
+      _command="$(sed -E "s|(<${_keyword}>)|${_subst}|g" <<< ${_command})"
     #else
-    #  cmd="$(sed -E "s|(<${index}>)|${subst}|" <<< ${cmd})"
+    #  cmd="$(sed -E "s|(<${keyword}>)|${subst}|" <<< ${cmd})"
     #fi
   done
-  printf "${cmd}"
+
+  eval "${1}='${_command}'"
+} # }}}
+
+substitute_arrays () { # {{{
+  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
+  local _command="${2}"
+
+  while true; do
+    # Check if anything left to replace
+    [[ ${_command} == *"<:"*","*":>"* ]] || break
+
+    # Get the content of the first occurence of <keyword>
+    local _keyword="$(echo ${_command} | awk -F[\<\:\:\>] '{print $2}')"
+
+    ## Get substitution for <keyword>
+    #if test -n "${ROFI}"; then
+    #  subst=$(echo "" | rofi -lines 0 -dmenu -p "${keyword}")
+    #else
+    #  read -p "${keyword}> " subst
+    #fi
+    ## Default to keyword if user doesn't provide any
+    #test -z "${subst}" && subst="${keyword}"
+
+    # Replace <:keyword,list:> with ${subst}
+    _command="$(sed -E "s|(<${_keyword}>)|${_subst}|g" <<< ${_command})"
+  done
+
+  eval "${1}='${_command}'"
 } # }}}
 
 utilize () { # {{{
-  cmd="${1}"
-  test -n "${SILENT}" || printf "$ ${cmd}\n\n"
+  local _command="${1}"
+
+  printf "$ ${_command}\n\n"
 
   if test -n "${OUTPUT_AS_TEXT}"; then
-    cmd="$(envsubst <<<${cmd})"
-    printf "${cmd}"
+    _command="$(envsubst <<<${_command})"
+    printf "${_command}"
   else
-    eval "${cmd}"
+    eval "${_command}"
   fi
 } # }}}
 
-commands_file="$(select_commands_file "${COMMANDS_FILE}")"
+select_commands_file "commands_file" "${COMMANDS_FILE}"
 export __file="${commands_file}"
 export __path="$(dirname "${__file}")"
 
-selected_command="$(select_command "${commands_file}")"
+select_command "command" "${commands_file}"
 
-substituted_command="$(substitute_command "${selected_command}")"
+substitute_keywords "command" "${command}"
+#substitute_arrays "command" "${command}"
 
-utilize "${substituted_command}"
+utilize "${command}"
