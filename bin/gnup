@@ -115,7 +115,7 @@ usage () { # {{{
 # }}}
 
 positional=()
-DEFAULT_COMMANDS="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY=""
+DEFAULT_COMMANDS="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -125,9 +125,8 @@ while test "${#}" -gt "0"; do
     -q|--query)
       FZF_QUERY="${2}"
       shift;shift;;
-    -d|--defaults)
-      # TODO Add -e|--edit to edit instead of -d
-      DEFAULT_COMMANDS=': Edit commands file. ; ${EDITOR:-vim} ${__file}\n'
+    -e|--edit)
+      EDIT_COMMANDS_FILE="true"
       shift;;
     -t|--text)
       OUTPUT_AS_TEXT="true"
@@ -308,6 +307,11 @@ utilize () { # {{{
 select_commands_file "commands_file" "${COMMANDS_FILE}"
 export __file="${commands_file}"
 export __path="$(dirname "${__file}")"
+
+if test -n "${EDIT_COMMANDS_FILE}"; then
+  eval "${EDITOR:-vim} ${__file}"
+  exit 0
+fi
 
 select_command "command" "${commands_file}"
 
