@@ -86,8 +86,9 @@ usage () { # {{{
 # TODO Check for dependencies.
 # TODO Add support for post-delection editing of command with tmp vim files. Or maybe zsh?
 # TODO Comments on previous line to appear in preview pane.
-# TODO Empty substitutions should be reusable (<> should not act as a token, rather substitute *just* that one)
+# TODO Empty substitutions should be reusable (<> should not act as a token, rather substitute *just* that one, and currently the only way of inserting an empty value (unless space works))
 # TODO Required substitutions (e.g. <!keyword>)
+# TODO "No commands file found, create?" Yes/No with FZF.
 # FIXME Stdin pipe redirection {{{
 #if test -p /dev/stdin; then
 #  STDIN_COMMANDS="$(cat)"
@@ -176,8 +177,8 @@ select_commands_file () { # {{{
     elif (test -d '.git' || git rev-parse --is-inside-work-tree > /dev/null 2>&1) \
      && test -f "$(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2))"; then
       _commands_file="$(printf $(find -L -type f -name 'commands' 2> >(grep -v 'Permission denied' >&2)))"
-    elif test -f "${HOME}/.config/commands"; then
-      _commands_file="${HOME}/.config/commands"
+    elif test -f "${XDG_CONFIG_HOME:-${HOME}/.config}/commands"; then
+      _commands_file="${XDG_CONFIG_HOME:-${HOME}/.config}/commands"
     elif test -f "${HOME}/.commands"; then
       _commands_file="${HOME}/.commands"
     else
