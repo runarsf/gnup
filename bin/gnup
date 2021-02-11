@@ -127,7 +127,7 @@ while test "${#}" -gt "0"; do
       shift;shift;;
     -d|--defaults)
       # TODO Add -e|--edit to edit instead of -d
-      DEFAULT_COMMANDS=': Edit ${__type} commands file. ; ${EDITOR:-vim} ${__file}\n'
+      DEFAULT_COMMANDS=': Edit commands file. ; ${EDITOR:-vim} ${__file}\n'
       shift;;
     -t|--text)
       OUTPUT_AS_TEXT="true"
