@@ -71,7 +71,7 @@ usage () { # {{{
 	${C_GREEN}Options:${RESET}
 	  -h, --help               Display usage menu.
 	  -q, --query     <${C_RED}query${RESET}>  Pre-fill query for selection menu.
-	  -d, --defaults           Display default commands in selection.
+	  -e, --edit               Edit commands file.
 	  -t, --text               Don't run command after selection, but print the product.
 	  -r, --rofi               Show rofi instead of fzf.
 	
@@ -115,7 +115,7 @@ usage () { # {{{
 # }}}
 
 positional=()
-DEFAULT_COMMANDS="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE=""
+ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -199,8 +199,8 @@ select_command () { # {{{
 
   #IFS=$'\r\n'
   #GLOBIGNORE='*'
-  #commands=("$(<${commands_file})")
-  local _commands="${DEFAULT_COMMANDS}$(<${_commands_file})"
+  local _commands=("$(<${_commands_file})")
+  #local _commands="${DEFAULT_COMMANDS}$(<${_commands_file})"
   _commands="$(printf "${_commands}" | awk '{$1=$1};1')"
   local _lines=$(( "$(printf "${_commands}" | wc -l)" + 1))
 
