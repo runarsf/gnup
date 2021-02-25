@@ -74,6 +74,7 @@ usage () { # {{{
 	  -e, --edit               Edit commands file.
 	  -t, --text               Don't run command after selection, but print the product.
 	  -r, --rofi               Show rofi instead of fzf.
+	  -o, --one                Auto-accept when there's only one available option (fzf only). Can be combined with --query.
 	
 	${C_GREEN}Examples:${RESET}
 	  ${0} ${C_RED}-r${RESET}
@@ -116,7 +117,7 @@ usage () { # {{{
 # }}}
 
 positional=()
-ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
+SELECT_ONE="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -135,6 +136,9 @@ while test "${#}" -gt "0"; do
     -r|--rofi)
       # TODO -q|--query arg for rofi, -p should work, maybe not in dmenu mode
       ROFI="true"
+      shift;;
+    -o|--one)
+      SELECT_ONE="--select-1"
       shift;;
     --*)
       printf "Unknown option: ${1}\n"
@@ -211,11 +215,14 @@ select_command () { # {{{
   else
     _command=$(\
       printf "${_commands}" \
-    | fzf --query="${FZF_QUERY}" --exit-0
+    | fzf --query="${FZF_QUERY}" --exit-0 ${SELECT_ONE}
     )
   fi
+
   if test -n "${_command}"; then
-    eval "${1}='${_command}'"
+    # FIXME HACK
+    #eval "${1}='${_command}'"
+    command="${_command}"
   else
     return 1
   fi
@@ -242,16 +249,23 @@ substitute_keywords () { # {{{
     # Default to keyword if user doesn't provide any substitution/replacement
     test -z "${_subst}" && _subst="${_keyword}"
 
-    # Replace <keyword> with ${subst}
-    # TODO Don't replace all when only <>
-    #if [[ $b =~ "^.*<.*\S.*>.*$" ]]; then
+    # Replace <${_keyword}> with ${_subst}
+    # TODO: Implement pre/suffixes in the template strings that show gnup what to do.
+    #   e.g. <?something?> should always ask. <??> should always ask and be an empty string.
+    #        <:a,b:> should be an array.
+    #        <!:a,b:!> should be an array and always ask.
+    if test -n "${_keyword// }"; then
+      # Replaces all instances of <${_keyword}> with ${_subst}
       _command="$(sed -E "s|(<${_keyword}>)|${_subst}|g" <<< ${_command})"
-    #else
-    #  cmd="$(sed -E "s|(<${keyword}>)|${subst}|" <<< ${cmd})"
-    #fi
+    else
+      # Replaces the first instance of <${_keyword}> with ${_subst}
+      _command="$(sed -E "s|(<${_keyword}>)|${_subst}|" <<< ${_command})"
+    fi
   done
 
-  eval "${1}='${_command}'"
+  # FIXME HACK
+  #eval "${1}='${_command}'"
+  command="${_command}"
 } # }}}
 
 substitute_arrays () { # {{{
@@ -288,7 +302,9 @@ substitute_arrays () { # {{{
     _command="$(sed -E "s|(<${_keystring}>)|${_subst}|g" <<< ${_command})"
   done
 
-  eval "${1}='${_command}'"
+  # FIXME HACK
+  #eval "${1}='${_command}'"
+  command="${_command}"
 } # }}}
 
 utilize () { # {{{
@@ -300,7 +316,10 @@ utilize () { # {{{
     _command="$(envsubst <<<${_command})"
     printf "${_command}"
   else
+    # `false; echo 'hi'` would fail if this is not set.
+    set +o errexit
     eval "${_command}"
+    set -o errexit
   fi
 } # }}}
 
@@ -314,6 +333,7 @@ if test -n "${EDIT_COMMANDS_FILE}"; then
   exit 0
 fi
 
+# FIXME: Evaling seemed to break, temporily fixed by setting static variable assignment in the function (command=).
 select_command "command" "${commands_file}"
 
 substitute_arrays "command" "${command}"
