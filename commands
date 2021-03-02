@@ -1,0 +1,5 @@
+: 1 ; echo 'First.'
+: 2 ; echo 'Second.'
+: 3 ; ./bin/gnup -r '^: 2'
+: 4 ; echo 'Fourth.'
+: 5 ; ./bin/gnup -r ': 2'

@@ -73,8 +73,8 @@ usage () { # {{{
 	  -q, --query     <${C_RED}query${RESET}>  Pre-fill query for selection menu.
 	  -e, --edit               Edit commands file.
 	  -t, --text               Don't run command after selection, but print the product.
-	  -r, --rofi               Show rofi instead of fzf.
 	  -o, --one                Auto-accept when there's only one available option (fzf only). Can be combined with --query.
+	  -r, --regex   <${C_RED}pattern${RESET}>  Match each line with a regex pattern and run the first match.
 	
 	${C_GREEN}Examples:${RESET}
 	  ${0} ${C_RED}-r${RESET}
@@ -117,7 +117,7 @@ usage () { # {{{
 # }}}
 
 positional=()
-SELECT_ONE="" ROFI="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
+REGEX="" SELECT_ONE="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -125,7 +125,7 @@ while test "${#}" -gt "0"; do
       exit 0
       shift;;
     -q|--query)
-      FZF_QUERY="${2}"
+      FZF_QUERY="${2:?}"
       shift;shift;;
     -e|--edit)
       EDIT_COMMANDS_FILE="true"
@@ -133,13 +133,12 @@ while test "${#}" -gt "0"; do
     -t|--text)
       OUTPUT_AS_TEXT="true"
       shift;;
-    -r|--rofi)
-      # TODO -q|--query arg for rofi, -p should work, maybe not in dmenu mode
-      ROFI="true"
-      shift;;
     -o|--one)
       SELECT_ONE="--select-1"
       shift;;
+    -r|--regex)
+      REGEX="${2:?}"
+      shift;shift;;
     --*)
       printf "Unknown option: ${1}\n"
       exit 1
@@ -169,8 +168,7 @@ COMMANDS_FILE="${1:-}"
 # }}}
 
 select_commands_file () { # {{{
-  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
-  local _commands_file="${2}"
+  local _commands_file="${1}"
 
   # TODO Allow git-root commands file.
   # ??? Maybe this function shouldn't check if the file exists so the function could be reused for checking where the commands file *should* be, like for -c|--create.
@@ -195,33 +193,37 @@ select_commands_file () { # {{{
     return 1
   fi
 
-  eval "${1}=$(realpath ${_commands_file})"
+  commands_file="$(realpath ${_commands_file})"
 } # }}}
 
 select_command () { # {{{
-  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
-  local _commands_file="${2}"
+  local _commands_file="${1}"
 
   #IFS=$'\r\n'
   #GLOBIGNORE='*'
   local _commands=("$(<${_commands_file})")
-  #local _commands="${DEFAULT_COMMANDS}$(<${_commands_file})"
+  #_commands="${DEFAULT_COMMANDS}$(<${_commands_file})"
   _commands="$(printf "${_commands}" | awk '{$1=$1};1')"
-  local _lines=$(( "$(printf "${_commands}" | wc -l)" + 1))
 
-  local _command
-  if test -n "${ROFI}"; then
-    _command=$(rofi -lines ${_lines} -i -dmenu "${@}" <<< ${_commands})
+  local _command=""
+  if test -n "${REGEX}"; then
+    while IFS= read -r _line; do
+      if [[ $_line =~ $REGEX ]]; then
+        echo $_line matches $REGEX
+        _command="${_line}"
+        break
+      else
+        echo $_line does not match $REGEX
+      fi
+    done <<< "${_commands}"
   else
     _command=$(\
       printf "${_commands}" \
-    | fzf --query="${FZF_QUERY}" --exit-0 ${SELECT_ONE}
+      | fzf --query="${FZF_QUERY}" --exit-0 ${SELECT_ONE}
     )
   fi
 
   if test -n "${_command}"; then
-    # FIXME HACK
-    #eval "${1}='${_command}'"
     command="${_command}"
   else
     return 1
@@ -229,8 +231,7 @@ select_command () { # {{{
 } # }}}
 
 substitute_keywords () { # {{{
-  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
-  local _command="${2}"
+  local _command="${1}"
 
   while true; do
     # Check if anything left to replace
@@ -241,11 +242,7 @@ substitute_keywords () { # {{{
 
     # Get substitution for <keyword>
     local _subst
-    if test -n "${ROFI}"; then
-      _subst=$(echo "" | rofi -lines 0 -dmenu -p "${_keyword}")
-    else
-      read -p "${_keyword}> " _subst
-    fi
+    read -p "${_keyword}> " _subst
     # Default to keyword if user doesn't provide any substitution/replacement
     test -z "${_subst}" && _subst="${_keyword}"
 
@@ -263,14 +260,11 @@ substitute_keywords () { # {{{
     fi
   done
 
-  # FIXME HACK
-  #eval "${1}='${_command}'"
   command="${_command}"
 } # }}}
 
 substitute_arrays () { # {{{
-  test -n "${1}" || { printf "Incorrect usage."; exit 1; }
-  local _command="${2}"
+  local _command="${1}"
 
   while true; do
     # Check if anything left to replace
@@ -287,14 +281,10 @@ substitute_arrays () { # {{{
     local _keysplit=$( IFS=$'\n'; echo "${_keys[*]}" )
     local _lines=$(( "$(printf "${_keysplit}" | wc -l)" + 1))
 
-    if test -n "${ROFI}"; then
-      _subst=$(rofi -lines ${_lines} -i -dmenu "${@}" <<< ${_keysplit})
-    else
-      _subst=$(\
-        printf "${_keysplit}" \
-      | fzf --query="${FZF_QUERY}" --exit-0
-      )
-    fi
+    local _subst=$(\
+      printf "${_keysplit}" \
+    | fzf --query="${FZF_QUERY}" --exit-0
+    )
 
     test -z "${_subst}" && _subst="${_keys[0]}"
 
@@ -302,8 +292,6 @@ substitute_arrays () { # {{{
     _command="$(sed -E "s|(<${_keystring}>)|${_subst}|g" <<< ${_command})"
   done
 
-  # FIXME HACK
-  #eval "${1}='${_command}'"
   command="${_command}"
 } # }}}
 
@@ -324,7 +312,7 @@ utilize () { # {{{
 } # }}}
 
 # For future reference: the output of `select_commands_file` is assigned to `commands_file`.
-select_commands_file "commands_file" "${COMMANDS_FILE}"
+select_commands_file "${COMMANDS_FILE}" # returns `commands_file`
 export __file="${commands_file}"
 export __path="$(dirname "${__file}")"
 
@@ -333,10 +321,9 @@ if test -n "${EDIT_COMMANDS_FILE}"; then
   exit 0
 fi
 
-# FIXME: Evaling seemed to break, temporily fixed by setting static variable assignment in the function (command=).
-select_command "command" "${commands_file}"
+select_command "${commands_file}" # returns `command`
 
-substitute_arrays "command" "${command}"
-substitute_keywords "command" "${command}"
+substitute_arrays "${command}" # returns `command`
+substitute_keywords "${command}" # returns `command`
 
 utilize "${command}"
