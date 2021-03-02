@@ -77,7 +77,7 @@ usage () { # {{{
 	  -r, --regex   <${C_RED}pattern${RESET}>  Match each line with a regex pattern and run the first match.
 	
 	${C_GREEN}Examples:${RESET}
-	  ${0} ${C_RED}-r${RESET}
+	  ${0} ${C_RED}-r${RESET} ${C_MAGENTA}'^: 1'${RESET}
 	${RESET}
 	EOMAN
 } # }}}
