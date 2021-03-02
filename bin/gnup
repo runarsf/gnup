@@ -75,6 +75,7 @@ usage () { # {{{
 	  -t, --text               Don't run command after selection, but print the product.
 	  -o, --one                Auto-accept when there's only one available option (fzf only). Can be combined with --query.
 	  -r, --regex   <${C_RED}pattern${RESET}>  Match each line with a regex pattern and run the first match.
+	  -p, --prompt             Prompt the user before running regex-matched command (only works with -r|--regex).
 	
 	${C_GREEN}Examples:${RESET}
 	  ${0} ${C_RED}-r${RESET} ${C_MAGENTA}'^: 1'${RESET}
@@ -117,7 +118,7 @@ usage () { # {{{
 # }}}
 
 positional=()
-REGEX="" SELECT_ONE="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
+REGEX="" PROMPT="" SELECT_ONE="" OUTPUT_AS_TEXT="" FZF_QUERY="" EDIT_COMMANDS_FILE="" # DEFAULT_COMMANDS=""
 while test "${#}" -gt "0"; do
   case "${1}" in
     -h|--help)
@@ -139,6 +140,9 @@ while test "${#}" -gt "0"; do
     -r|--regex)
       REGEX="${2:?}"
       shift;shift;;
+    -p|--prompt)
+      PROMPT="true"
+      shift;;
     --*)
       printf "Unknown option: ${1}\n"
       exit 1
@@ -209,11 +213,11 @@ select_command () { # {{{
   if test -n "${REGEX}"; then
     while IFS= read -r _line; do
       if [[ $_line =~ $REGEX ]]; then
-        echo $_line matches $REGEX
+        #echo $_line matches $REGEX
         _command="${_line}"
         break
-      else
-        echo $_line does not match $REGEX
+      #else
+      #  echo $_line does not match $REGEX
       fi
     done <<< "${_commands}"
   else
@@ -322,6 +326,11 @@ if test -n "${EDIT_COMMANDS_FILE}"; then
 fi
 
 select_command "${commands_file}" # returns `command`
+
+if test -n "${PROMPT}" -a -n "${REGEX}"; then
+  printf "| ${command}\n"
+  read -p "| Press enter to continue (CTRL-c to abort) "
+fi
 
 substitute_arrays "${command}" # returns `command`
 substitute_keywords "${command}" # returns `command`
